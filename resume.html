@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Animated Resume Button Test</title>
+<title>Resume Download Button</title>
 <style>
   body {
     background: #f5f5f5;
@@ -24,7 +24,7 @@
     background: #e0f7fa;
     border-radius: 12px;
     cursor: pointer;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.4s ease;
   }
 
   .resume_download-box:hover {
@@ -38,7 +38,7 @@
     left: 0;
     width: 100%;
     height: 0;
-    background-color: #00acc1;
+    background-color: #2F3E46;
     z-index: 0;
     pointer-events: none;
   }
@@ -48,62 +48,59 @@
     100% { height: 100%; }
   }
 
-  .resume_download-box span {
-    position: relative;
-    z-index: 2;
-    color: #004d5a;
-    font-weight: bold;
-    font-size: 1em;
-    transition: transform 0.4s ease;
-  }
+.resume_download-box span {
+  position: relative;
+  z-index: 2;
+  color: #004d5a;
+  font-weight: bold;
+  font-size: 1em;
+  transition: transform 0.4s ease, color 0.4s ease;
+}
 
-  /* Common icon styles */
+
   .icon {
     position: absolute;
-    bottom: -100%;
-    width: 40px;
-    height: 40px;
+    bottom: -80%;
+    width: 48px;
+    height: 48px;
     opacity: 0;
-    transition: all 0.4s ease;
-    z-index: 2;
+    transition: bottom 0.4s ease, opacity 0.4s ease;
+    z-index: 3;
+    pointer-events: none;
   }
 
-  .icon path {
-    fill: none;
-    stroke-width: 4;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-dasharray: 50;
-    stroke-dashoffset: 50;
-    transition: stroke-dashoffset 0.6s ease-in-out;
+  /* ✅ success (tick) */
+  /* 🔵 Loading state — active during fill animation */
+.resume_download-box.loading {
+  background-color: #e0f7fa;
+}
+
+.resume_download-box.loading #resume-text {
+  color: #ffffff;
+}
+
+.resume_download-box.show-tick {
+  background-color: #00acc1 !important;
+}
+
+.resume_download-box.show-tick #resume-text {
+  transform: translateY(-200%);
+  color: #F1F1F1 !important;  /* ← force white text */
+}
+
+  .resume_download-box.show-tick #tick {
+    bottom: 15% !important;
+    opacity: 1 !important;
   }
 
-  /* Colors */
-  .tick path {
-    stroke: green;
+  /* ❌ failure (cross) */
+  .resume_download-box.show-cross #resume-text {
+    transform: translateY(-200%);
   }
 
-  .cross path {
-    stroke: red;
-  }
-
-  /* Move text up */
-  .show-tick #resume-text,
-  .show-cross #resume-text {
-    transform: translateY(-150%);
-  }
-
-  /* Slide in icons */
-  .show-tick #tick,
-  .show-cross #cross {
-    bottom: 35%;
-    opacity: 1;
-  }
-
-  /* Trigger the drawing animation */
-  .show-tick #tick path,
-  .show-cross #cross path {
-    stroke-dashoffset: 0;
+  .resume_download-box.show-cross #cross {
+    bottom: 15% !important;
+    opacity: 1 !important;
   }
 </style>
 </head>
@@ -113,15 +110,11 @@
   <div class="fill-progress" id="fill-progress"></div>
   <span id="resume-text">Resume</span>
 
-  <!-- ✅ Tick SVG -->
-  <svg id="tick" class="icon tick" viewBox="0 0 52 52">
-    <path d="M14 27 L22 35 L38 17" />
-  </svg>
+  <!-- ✅ Tick GIF -->
+  <img id="tick" class="icon tick" src="tick.gif" alt="tick">
 
-  <!-- ❌ Cross SVG -->
-  <svg id="cross" class="icon cross" viewBox="0 0 52 52">
-    <path d="M16 16 L36 36 M36 16 L16 36" />
-  </svg>
+  <!-- ❌ Cross GIF -->
+  <img id="cross" class="icon cross" src="cross.gif" alt="cross">
 </div>
 
 <script>
@@ -130,32 +123,51 @@ function startDownload() {
   const fill = document.getElementById('fill-progress');
   const tick = document.getElementById('tick');
   const cross = document.getElementById('cross');
+  const text = document.getElementById('resume-text');
 
-  // Reset animations
+  // Start fill animation
   fill.style.animation = 'none';
   fill.offsetHeight; // force reflow
   fill.style.animation = 'fillUp 2s forwards';
-  box.classList.remove('show-tick', 'show-cross');
 
-  // Reset SVG stroke
-  tick.querySelectorAll('path').forEach(p => p.style.strokeDashoffset = '50');
-  cross.querySelectorAll('path').forEach(p => p.style.strokeDashoffset = '50');
+  // Remove old states
+  box.classList.remove('show-tick', 'show-cross', 'loading');
 
+  // 🔵 Immediately show loading colors
+  box.classList.add('loading');
+
+  // Restart GIFs
+  [tick, cross].forEach(img => {
+    img.src = img.src;
+    img.style.opacity = 0;
+    img.style.bottom = '-80%';
+  });
+
+  // Simulate a 2s download
   setTimeout(async () => {
-    const pdfUrl = 'wrong/path/file.pdf'; // intentionally wrong path
+    const pdfUrl = 'wrong/path/file.pdf'; // simulate failure for testing
 
     try {
       const response = await fetch(pdfUrl);
-      if (!response.ok) throw new Error(`Failed: ${response.status}`);
+      if (!response.ok) throw new Error('Failed');
 
-      // If it succeeded (replace above URL later)
+      box.classList.remove('loading');
       box.classList.add('show-tick');
-    } catch (error) {
-      console.error(error);
+    } catch {
+      box.classList.remove('loading');
       box.classList.add('show-cross');
     }
+
+    // 🔁 Auto-reset after 3 seconds
+    setTimeout(() => {
+      box.classList.remove('show-tick', 'show-cross', 'loading');
+      fill.style.animation = 'none';
+      fill.style.height = '0';
+    }, 3000);
+
   }, 2000);
 }
+
 </script>
 
 </body>
