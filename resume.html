@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Animated Resume Button Test</title>
+<style>
+  body {
+    background: #f5f5f5;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .resume_download-box {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    width: 180px;
+    height: 60px;
+    background: #e0f7fa;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .resume_download-box:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 10px rgba(0, 172, 193, 0.5);
+  }
+
+  .fill-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0;
+    background-color: #00acc1;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  @keyframes fillUp {
+    0% { height: 0%; }
+    100% { height: 100%; }
+  }
+
+  .resume_download-box span {
+    position: relative;
+    z-index: 2;
+    color: #004d5a;
+    font-weight: bold;
+    font-size: 1em;
+    transition: transform 0.4s ease;
+  }
+
+  /* Common icon styles */
+  .icon {
+    position: absolute;
+    bottom: -100%;
+    width: 40px;
+    height: 40px;
+    opacity: 0;
+    transition: all 0.4s ease;
+    z-index: 2;
+  }
+
+  .icon path {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 50;
+    stroke-dashoffset: 50;
+    transition: stroke-dashoffset 0.6s ease-in-out;
+  }
+
+  /* Colors */
+  .tick path {
+    stroke: green;
+  }
+
+  .cross path {
+    stroke: red;
+  }
+
+  /* Move text up */
+  .show-tick #resume-text,
+  .show-cross #resume-text {
+    transform: translateY(-150%);
+  }
+
+  /* Slide in icons */
+  .show-tick #tick,
+  .show-cross #cross {
+    bottom: 35%;
+    opacity: 1;
+  }
+
+  /* Trigger the drawing animation */
+  .show-tick #tick path,
+  .show-cross #cross path {
+    stroke-dashoffset: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="resume_download-box" onclick="startDownload()">
+  <div class="fill-progress" id="fill-progress"></div>
+  <span id="resume-text">Resume</span>
+
+  <!-- ✅ Tick SVG -->
+  <svg id="tick" class="icon tick" viewBox="0 0 52 52">
+    <path d="M14 27 L22 35 L38 17" />
+  </svg>
+
+  <!-- ❌ Cross SVG -->
+  <svg id="cross" class="icon cross" viewBox="0 0 52 52">
+    <path d="M16 16 L36 36 M36 16 L16 36" />
+  </svg>
+</div>
+
+<script>
+function startDownload() {
+  const box = document.querySelector('.resume_download-box');
+  const fill = document.getElementById('fill-progress');
+  const tick = document.getElementById('tick');
+  const cross = document.getElementById('cross');
+
+  // Reset animations
+  fill.style.animation = 'none';
+  fill.offsetHeight; // force reflow
+  fill.style.animation = 'fillUp 2s forwards';
+  box.classList.remove('show-tick', 'show-cross');
+
+  // Reset SVG stroke
+  tick.querySelectorAll('path').forEach(p => p.style.strokeDashoffset = '50');
+  cross.querySelectorAll('path').forEach(p => p.style.strokeDashoffset = '50');
+
+  setTimeout(async () => {
+    const pdfUrl = 'wrong/path/file.pdf'; // intentionally wrong path
+
+    try {
+      const response = await fetch(pdfUrl);
+      if (!response.ok) throw new Error(`Failed: ${response.status}`);
+
+      // If it succeeded (replace above URL later)
+      box.classList.add('show-tick');
+    } catch (error) {
+      console.error(error);
+      box.classList.add('show-cross');
+    }
+  }, 2000);
+}
+</script>
+
+</body>
+</html>
