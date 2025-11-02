@@ -3,97 +3,130 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pixel Scroll Transition Test</title>
+  <title>Pixel Eruption Scroll Transition</title>
 
   <!-- GSAP + ScrollTrigger -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
   <style>
-    * {
+    html, body {
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
-    }
-
-    html, body {
-      height: 100%;
+      height: 200vh;
       overflow-x: hidden;
-      font-family: sans-serif;
+      background: black;
+      transition: background-color 0.2s linear;
     }
 
     section {
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      transition: background 0.5s ease;
-    }
-
-    #section1 { background: black; color: white; }
-    #section2 { background: white; color: black; }
-
-    /* Pixel overlay */
-    .pixel-mask {
       position: fixed;
       inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 3rem;
+      z-index: 2;
+      transition: opacity 0.3s ease;
+    }
+
+    #section1 { color: wheat; }
+    #section2 { color: black; }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
       pointer-events: none;
-      background: black;
-      z-index: 10;
-      /* Create pixel-like chunks using CSS pattern */
-      background-image: radial-gradient(square, black 50%, transparent 51%);
-      background-size: 4px 4px;
-      transform: scale(1);
-      opacity: 0;
     }
   </style>
 </head>
 <body>
 
-  <section id="section1">
-    <h1>Section 1 — Black</h1>
-  </section>
+  <section id="section1"><h1>Section 1 — Black</h1></section>
+  <a href="#section2" style="
+    position: absolute;
+    z-index: 4;
+">Click here</a>
+  <section id="section2"><h1>Section 2 — White</h1></section>
 
-  <section id="section2">
-    <h1>Section 2 — White</h1>
-  </section>
-
-  <div class="pixel-mask"></div>
+  <canvas id="pixelCanvas"></canvas>
 
   <script>
     gsap.registerPlugin(ScrollTrigger);
 
-    const mask = document.querySelector(".pixel-mask");
+    const canvas = document.getElementById("pixelCanvas");
+    const ctx = canvas.getContext("2d");
 
-    // Create timeline for pixel transition
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: "#section2",
-        start: "top bottom",     // when white section starts to enter
-        end: "top top",          // until it fully replaces black
-        scrub: true,
+    let w, h, pixels = [];
+    const pixelSize = 128;
+    const eruptionHeight = 2;
+    const fadeStart = 0.85; // start soft fade near the end
+
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+      pixels = [];
+
+      const cols = Math.ceil(w / pixelSize);
+      const rows = Math.ceil(h / pixelSize);
+
+      for (let i = 0; i < cols * rows; i++) {
+        const x = (i % cols) * pixelSize;
+        const y = h - Math.floor(i / cols) * pixelSize;
+        pixels.push({
+          x,
+          y,
+          offsetY: Math.random() * h * eruptionHeight,
+          delay: Math.random(),
+        });
       }
-    });
+    }
 
-    // Animate mask "revealing" the next section
-    tl.fromTo(mask,
-      { opacity: 1, scale: 0.5 },
-      { opacity: 0, scale: 3, ease: "power1.inOut" }
-    );
+    window.addEventListener("resize", resize);
+    resize();
 
-    // Reverse effect when scrolling up
     ScrollTrigger.create({
-      trigger: "#section2",
-      start: "bottom bottom",
-      end: "bottom top",
+      trigger: document.body,
+      start: "top top",
+      end: "bottom bottom",
       scrub: true,
-      onUpdate: (self) => {
-        const progress = 1 - self.progress;
-        gsap.to(mask, { opacity: progress, scale: 3 - 2.5 * progress, overwrite: true });
-      }
+      onUpdate: (self) => draw(self.progress),
     });
-  </script>
 
+    function draw(p) {
+      ctx.clearRect(0, 0, w, h);
+
+      const eruptionProgress = gsap.utils.clamp(0, 1, p * 1.1);
+
+      // Smooth background fade
+      const bgValue = Math.floor(eruptionProgress * 255);
+      document.body.style.backgroundColor = `rgb(${bgValue}, ${bgValue}, ${bgValue})`;
+
+      // Draw pixels
+      pixels.forEach(px => {
+        let local = Math.max(0, eruptionProgress - px.delay);
+        let rise = px.offsetY * local;
+        let y = px.y - rise;
+
+        // Clip pixels that should no longer be visible (prevent rogue pixels)
+        if (y < -pixelSize || y > h) return;
+
+        // Fade calculation
+        let fadeFactor = Math.min(1, Math.max(0, (eruptionProgress - fadeStart) / (1 - fadeStart)));
+        const whiteLevel = eruptionProgress >= fadeStart ? fadeFactor : 0;
+        const colorValue = Math.floor(whiteLevel * 255);
+
+        ctx.fillStyle = `rgb(${colorValue}, ${colorValue}, ${colorValue})`;
+        ctx.fillRect(px.x, y, pixelSize, pixelSize);
+      });
+
+      // Crossfade sections
+      gsap.set("#section1", { opacity: 1 - eruptionProgress * 1.5 });
+      gsap.set("#section2", { opacity: eruptionProgress * 1.5 });
+    }
+
+    draw(0);
+  </script>
 </body>
 </html>
